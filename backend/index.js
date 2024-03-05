@@ -25,20 +25,26 @@ app.listen(PORT, function(){
   console.log(`Server is running on: ${PORT}`);
 });
 
+    /*FONCTION SIGNUP*/
 
   async function signUp(req, res){
-    const body = req.body;
-    console.log('body:', body);
+    // const body = req.body;
+    // console.log('body:', body);
 
     const email = req.body.email; // à pusher dans l'array de users
     const password = req.body.password;// à pusher dans l'array de users
-    
+    if(email == null || password == null){
+      res.status(400).send("Email et password requis");
+      return;
+    }
+
+    try{
     const userDatabase = await User.findOne({ // User est un modele de mongo importé
       // .find renvoie toujours une array []
       //.findOne renvoie un seul objet
       email: email // il faut vérifier l'email qu'on a reçu
     });
-    console.log('userDatabase:', userDatabase);
+    // console.log('userDatabase:', userDatabase);
 
     if (userDatabase != null){ // une array est toujours !=null
       res.status(400).send("Email déjà existant");
@@ -51,20 +57,26 @@ app.listen(PORT, function(){
       email: email,
       password: hashPassword(password)
     };
-    try{
       await User.create(user);
-      throw new Error ('Panne database') // si ça marche pas, panne d'internet
+      res.send('User enregistré'); // qq soit le signup, on va lui renvoyer un resp.send 200 OK
     } catch(e){
       console.error(e);
       res.status(500).send('Erreur Serveur');
-      return;
     }
-    res.send('User enregistré'); // qq soit le signup, on va lui renvoyer un resp.send 200 OK
   
     }
 
+
+    /*FONCTION LOGIN*/
     async function login(req, res){
       const body = req.body; // sur la requêt il y aura un body
+      if (body.email == null || body.password == null) {
+        res.status(400).send("Email ET password requis");
+        return;
+      }
+      try{
+
+
 
       const userDatabase = await User.findOne({
         email: body.email // trouve moi un email utilisateur dans la base de données dont email = body.email
@@ -84,8 +96,11 @@ app.listen(PORT, function(){
           userId: userDatabase._id,  // le userid ça sera l'_id du userdatabase
           token:'token'
         });
-      }
-
+      }catch (e) {
+    console.error(e);
+    res.status(500).send("Erreur serveur");
+  }
+}
       function hashPassword(password) {
         const salt = bcrypt.genSaltSync(10); // salt : pourle meme mdp saisi, le hahs va rajouter quand meme de new caractere
         const hash = bcrypt.hashSync(password, salt); // pas besoin d'utiliser une promesse, il utilise tout de manière asynchrone
