@@ -2,6 +2,9 @@ const express = require('express');
 const app = express();
 const { User } = require("./database/mongo");// avec cet user, on va pouvoir utiliser ce modèle de mongo pour pouvoir enregistrer des data en base de données 
 const cors = require('cors');
+const bcrypt = require('bcrypt');
+
+
 const PORT = 4000;
 
 app.use(cors()); //les middleware vont etre exécutés ici
@@ -15,8 +18,9 @@ app.get('/', sayHi );
 app.post('/api/auth/signup', signUp); // récupéré du headers RequestURL
 app.post('/api/auth/login', login);
 
-
-
+// console.log('password in .env', process.env); // process .env recupere toutes les variables d'environnement dans fichier .env
+// variables d'environnement = tout ce qu'on passe dans le runtime
+// avec mackage dotenv package qui va charger toutes nos var d'env et le mettre dans notre process env
 app.listen(PORT, function(){
   console.log(`Server is running on: ${PORT}`);
 });
@@ -45,10 +49,8 @@ app.listen(PORT, function(){
     
     const user = {
       email: email,
-      password: password
+      password: hashPassword(password)
     };
-    // users.push(user); // Dans l'array users, on va se pusher un user
-    // console.log('users:', users);
     try{
       await User.create(user);
       throw new Error ('Panne database') // si ça marche pas, panne d'internet
@@ -72,14 +74,31 @@ app.listen(PORT, function(){
         return;
       }
       const passwordDatabase = userDatabase.password;
-      if (passwordDatabase != body.password) {
+      if (!isPasswordGood(req.body.password, passwordDatabase)) { // si le password n'est pas correct alors
+        // req.body.password = mdp canrd saisi et passwordDatabase = mdp de base de données
         res.status(401).send('Mauvais password');
         return;
       }
-// sil est bon on me renvoie un userid et un token
+// si cest bon on me renvoie un userid et un token de la base de donnée mongodb
         res.send({
           userId: userDatabase._id,  // le userid ça sera l'_id du userdatabase
           token:'token'
         });
+      }
+
+      function hashPassword(password) {
+        const salt = bcrypt.genSaltSync(10); // salt : pourle meme mdp saisi, le hahs va rajouter quand meme de new caractere
+        const hash = bcrypt.hashSync(password, salt); // pas besoin d'utiliser une promesse, il utilise tout de manière asynchrone
+        console.log('hash:', hash);
+        return hash;
+      }
+
+      function isPasswordGood(password, hash){
+       return bcrypt.compareSync(password, hash);
+        // console.log('password:', password);
+        // console.log('hash:', hash);
+        // const isOk = bcrypt.compareSync(password, hash);
+        // console.log('isOk:', isOk);
+        // return isOk;
       }
     
