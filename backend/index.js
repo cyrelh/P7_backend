@@ -3,24 +3,55 @@ const app = express();
 const { User } = require("./database/mongo");// avec cet user, on va pouvoir utiliser ce modèle de mongo pour pouvoir enregistrer des data en base de données 
 const cors = require('cors');
 const bcrypt = require('bcrypt');
+const { books } = require ('./database/books');
+const multer = require('multer');
 
+const storage = multer.diskStorage({ // appel de diskstorage dans un objet avec ses 2 keys destination et filename
+  destination: function (req, file, cb){
+    cb(null,"uploads");
+  },
+  filename: function (req, file, cb) {
+    const fileName = file.originalname.toLowerCase().split(" ").join("-") + Date.now() + ".jpg";
+    cb(null, Date.now() + "-" + fileName);
+  }
+});
+const upload = multer({storage}); // on appelle la fonction multer et on lui passe un obj qui a une key storage et sa valeur est storage: storage
 
 const PORT = 4000;
 
 app.use(cors()); //les middleware vont etre exécutés ici
 app.use(express.json()); // capable de lire les body en JSON
+app.use(express.static('public'));
+
 
 function sayHi(req,res){
   res.send("Hello");
 }
 
-app.get('/', sayHi );
+// app.get('/', sayHi );
 app.post('/api/auth/signup', signUp); // récupéré du headers RequestURL
 app.post('/api/auth/login', login);
+app.get ('/api/books', booksGET); // à chaque fois qu'on fait un booksGET, ça va d'abord passer par une fonction logReq
+app.post("/api/books", upload.single("image"), booksPOST);// besoin d'un middleware qui va recupérer les données du formData, et c'est la fonction upload qui contient ce middleware
+// quand on met une uatre fonction on appelle ça un middleware, et il faut que ce middleware appelle la fct next(), la req passera tjs d'un middleware à celui d'après jusqu'à la fct finale q'uon appele le controller
+// "image" --> Image: binary--> le nom du champ de la requete 
+// function logReq (req, res, next){ // next = manière d'appeler le middleware d'après
+// console.log("request:", req.body);
+// next();
+// }
+
+function booksGET(req, res){
+  res.send(books); // La réponse de la requete HTTP GET quand on fait appelle à la route api/books 
+}
+
+function booksPOST(req, res){
+const book = req.body;
+console.log("book:", book);
+}
 
 // console.log('password in .env', process.env); // process .env recupere toutes les variables d'environnement dans fichier .env
 // variables d'environnement = tout ce qu'on passe dans le runtime
-// avec mackage dotenv package qui va charger toutes nos var d'env et le mettre dans notre process env
+// avec package dotenv package qui va charger toutes nos var d'env et le mettre dans notre process env
 app.listen(PORT, function(){
   console.log(`Server is running on: ${PORT}`);
 });
@@ -75,9 +106,6 @@ app.listen(PORT, function(){
         return;
       }
       try{
-
-
-
       const userDatabase = await User.findOne({
         email: body.email // trouve moi un email utilisateur dans la base de données dont email = body.email
       });
@@ -116,4 +144,8 @@ app.listen(PORT, function(){
         // console.log('isOk:', isOk);
         // return isOk;
       }
+
+      User.deleteMany({}).then(() => {
+        console.log('Supression de tous les users dans la Database')
+      });
     
