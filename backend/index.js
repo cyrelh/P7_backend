@@ -19,17 +19,17 @@ const upload = multer({storage}); // on appelle la fonction multer et on lui pas
 
 const PORT = 4000;
 
-app.use(cors()); //les middleware vont etre exécutés ici
+app.use(cors()); //Autoriser au front et le backend à communiquer
 app.use(express.json()); // capable de lire les body en JSON
-app.use(express.static('public'));
+app.use(express.static('public')); // dossier puclic (images;etc) fichiers statiques
 
 
-function sayHi(req,res){
-  res.send("Hello");
-}
+// function sayHi(req,res){
+//   res.send("Hello");
+// }
 
 // app.get('/', sayHi );
-app.post('/api/auth/signup', signUp); // récupéré du headers RequestURL
+app.post('/api/auth/signup', signUp); // quand on se connecte au path et donc l'url ou route, ça déclence la fonciton "signup"
 app.post('/api/auth/login', login);
 app.get ('/api/books', booksGET); // à chaque fois qu'on fait un booksGET, ça va d'abord passer par une fonction logReq
 app.post("/api/books", upload.single("image"), booksPOST);// besoin d'un middleware qui va recupérer les données du formData, et c'est la fonction upload qui contient ce middleware
@@ -45,8 +45,11 @@ function booksGET(req, res){
 }
 
 function booksPOST(req, res){
-const book = req.body;
-console.log("book:", book);
+  const book = req.body.book;
+  console.log("book:", book); // String, récupéré brut du body 
+  const bookObj = JSON.parse(book); // transformation via JSON.parse qui va lire la string et la transformer en objet JSON
+  console.log("bookJson:", bookObj);
+  res.send('ok')
 }
 
 // console.log('password in .env', process.env); // process .env recupere toutes les variables d'environnement dans fichier .env
@@ -62,34 +65,30 @@ app.listen(PORT, function(){
     // const body = req.body;
     // console.log('body:', body);
 
-    const email = req.body.email; // à pusher dans l'array de users
+    const email_received = req.body.email; // à pusher dans l'array de users
     const password = req.body.password;// à pusher dans l'array de users
-    if(email == null || password == null){
-      res.status(400).send("Email et password requis");
-      return;
+    if(email_received == null || password == null){ // si pas d'email ou pas de password
+      res.status(400).send("Email et password requis"); //alors l'url répond une erreur avec statust 400 avec un message 
+      return; // permet d'arreter à ce niveau
     }
 
-    try{
-    const userDatabase = await User.findOne({ // User est un modele de mongo importé
-      // .find renvoie toujours une array []
-      //.findOne renvoie un seul objet
-      email: email // il faut vérifier l'email qu'on a reçu
-    });
-    // console.log('userDatabase:', userDatabase);
+    try{ // essaie de faire tout ce qui à l'interieur
+      const userDatabase = await User.findOne({ // Methode pourchercher  un seul utilisateur ^par son email avec l'email qu'on a recu de l'user
+        email: email_received // il faut vérifier l'email qu'on a reçu
+      });
+      // console.log('userDatabase:', userDatabase);
 
-    if (userDatabase != null){ // une array est toujours !=null
-      res.status(400).send("Email déjà existant");
-      return; // on ne va pas faire de nouveaux user (donc sil existe deja -> pas de push en dessous)
-    } // il va donc return sinon il va essayer de le fabriquer
-        // Si je cherche à faire un user à partir de l'email qui existe dejà
-        // il va dire email deja existant et va rien mettre dans base de données
-    
-    const user = {
-      email: email,
-      password: hashPassword(password)
-    };
-      await User.create(user);
-      res.send('User enregistré'); // qq soit le signup, on va lui renvoyer un resp.send 200 OK
+      if (userDatabase != null){ // si il trouve un user avec cet email-received dans la base de donnée
+        res.status(400).send("Email déjà existant"); // alors il dit qu'il y a deja un user dans la base de données
+        return; // on ne va pas faire de nouveaux user (donc sil existe deja -> pas de push en dessous)
+      } 
+      
+      const user = { // là on prépare à créer un user dans l base de données
+        email: email_received,
+        password: hashPassword(password)
+      };
+        await User.create(user); // ici je crée le user qui veut s'inscrire
+        res.send('User enregistré'); // qq soit le signup, on va lui renvoyer un resp.send 200 OK
     } catch(e){
       console.error(e);
       res.status(500).send('Erreur Serveur');
@@ -101,25 +100,28 @@ app.listen(PORT, function(){
     /*FONCTION LOGIN*/
     async function login(req, res){
       const body = req.body; // sur la requêt il y aura un body
-      if (body.email == null || body.password == null) {
+      const email_received = body.email;
+      const password_received = body.password;
+
+      if (email_received == null || password_received == null) {
         res.status(400).send("Email ET password requis");
         return;
       }
       try{
-      const userDatabase = await User.findOne({
-        email: body.email // trouve moi un email utilisateur dans la base de données dont email = body.email
+      const userDatabase = await User.findOne({ // Methode pourchercher  un seul utilisateur ^par son email avec l'email qu'on a recu de l'user
+        email: email_received // trouve moi un email utilisateur dans la base de données dont email = body.email
       });
       if  (userDatabase == null) { // si userdatabase est égal à null ou undefined --> on cherche à se logger alors qu'on n'est pas encore dans la base de données
-        res.status(401).send('Mauvais email');
+        res.status(401).send('Mauvais email'); // identifiant introuvable ou incorrect
         return;
       }
-      const passwordDatabase = userDatabase.password;
-      if (!isPasswordGood(req.body.password, passwordDatabase)) { // si le password n'est pas correct alors
+      const passwordDatabase = userDatabase.password; // on récupére le mdp de la db
+      if (!isPasswordGood(password_received, passwordDatabase)) { // si le password n'est pas correct alors
         // req.body.password = mdp canrd saisi et passwordDatabase = mdp de base de données
         res.status(401).send('Mauvais password');
         return;
       }
-// si cest bon on me renvoie un userid et un token de la base de donnée mongodb
+// si cest bon on me renvoie un userid et un token de la base de donnée mongodb et donc on cosidère que le user est connecté
         res.send({
           userId: userDatabase._id,  // le userid ça sera l'_id du userdatabase
           token:'token'
@@ -136,13 +138,8 @@ app.listen(PORT, function(){
         return hash;
       }
 
-      function isPasswordGood(password, hash){
+      function isPasswordGood(password, hash){ // function qui permet de comparer 2 mots de passe
        return bcrypt.compareSync(password, hash);
-        // console.log('password:', password);
-        // console.log('hash:', hash);
-        // const isOk = bcrypt.compareSync(password, hash);
-        // console.log('isOk:', isOk);
-        // return isOk;
       }
 
       User.deleteMany({}).then(() => {
