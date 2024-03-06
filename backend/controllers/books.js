@@ -9,7 +9,7 @@ async function booksGET(req, res){
 // Pour chaque book on va lui rajouter une propriété dessus et on va lui modifier l'imageUrl
 
   booksDatabase.forEach(book => {
-    book.imageUrl = 'http://localhost:4000/images/' + book.imageUrl; // quand lui il recevra le books, ils auront la bonne url
+    book.imageUrl = process.env.URL + '/images/'+ book.imageUrl; // quand lui il recevra le books, ils auront la bonne url
   });
   res.send(booksDatabase); // La réponse de la requete HTTP GET quand on fait appelle à la route api/books 
   }
