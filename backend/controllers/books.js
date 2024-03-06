@@ -2,10 +2,15 @@ const { upload } = require('../middleware/multer');
 const { Book } = require('../models/Book');// avec cet User , on va pouvoir utiliser ce modèle de mongo pour pouvoir enregistrer des data en base de données 
 const express = require('express');
 
-
 async function booksGET(req, res){
   const booksDatabase = await Book.find();
   console.log("booksDatabase:", booksDatabase);
+
+// Pour chaque book on va lui rajouter une propriété dessus et on va lui modifier l'imageUrl
+
+  booksDatabase.forEach(book => {
+    book.imageUrl = 'http://localhost:4000/images/' + book.imageUrl; // quand lui il recevra le books, ils auront la bonne url
+  });
   res.send(booksDatabase); // La réponse de la requete HTTP GET quand on fait appelle à la route api/books 
   }
   
