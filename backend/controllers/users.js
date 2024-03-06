@@ -3,8 +3,8 @@ const bcrypt = require('bcrypt');
 const express = require('express');
 
 const usersRouter = express.Router(); //dans le usersRouter on a seulement 2 requetes
-usersRouter.post('signUp', signUp);
-usersRouter.post('login', login);
+usersRouter.post('/signUp', signUp);
+usersRouter.post('/login', login);
 
 /*FONCTION SIGNUP*/
 

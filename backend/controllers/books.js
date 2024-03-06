@@ -1,11 +1,12 @@
 const { upload } = require('../middleware/multer');
-const { books } = require ('../database/books');
 const { Book } = require('../models/Book');// avec cet User , on va pouvoir utiliser ce modèle de mongo pour pouvoir enregistrer des data en base de données 
 const express = require('express');
 
 
-function booksGET(req, res){
-    res.send(books); // La réponse de la requete HTTP GET quand on fait appelle à la route api/books 
+async function booksGET(req, res){
+  const booksDatabase = await Book.find();
+  console.log("booksDatabase:", booksDatabase);
+  res.send(booksDatabase); // La réponse de la requete HTTP GET quand on fait appelle à la route api/books 
   }
   
   async function booksPOST(req, res){
