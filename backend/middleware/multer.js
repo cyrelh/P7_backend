@@ -1,3 +1,4 @@
+// gestion des données formulaires multipart/form-data
 const multer = require('multer');
 
 const storage = multer.diskStorage({ // appel de diskstorage dans un objet avec ses 2 keys destination et filename

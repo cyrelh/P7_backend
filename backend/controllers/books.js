@@ -11,9 +11,15 @@ async function booksGET(req, res){
   
   async function booksPOST(req, res){
     const file = req.file;
+    console.log("file:", file);
+    const filename = req.file.filename;
+
+    
     const book = req.body.book; // String, récupéré brut du body 
     const bookObj = JSON.parse(book); // transformation via JSON.parse qui va lire la string et la transformer en objet JSON
-    bookObj.imageUrl = file.path;
+    
+    bookObj.imageUrl = filename; //  on enregistre directement le filename dans l'imageURL -  but : avoir juste le nom du fichier
+
     
     try{ // dans le cas où le client fait une erreur dans la saisie year :string au lieu de number, ça evite que le serveur crash mais plutot affiche message erreur 500
       const result = await Book.create(bookObj); // le create nous renvoie à une promesse d'où le await
@@ -26,7 +32,13 @@ async function booksGET(req, res){
 
   const booksRouter = express.Router(); //dans le booksRouter on a seulement 2 requetes à la racine
   booksRouter.get('/', booksGET);
-  booksRouter.post('/', upload.single('image'), booksPOST);
+  booksRouter.post('/', upload.single('image'), booksPOST); // quand on fait un post sur le booksRouter, 
+  //multer va d'abord etre appele ce middlweare et upload.single('image')
+  // puis il va rajouter uen propriété file su rnotre req pour que le booksPOST y est accès
+
+      //   Book.deleteMany({}).then(() => {
+      //   console.log('Supression de tous les Books dans la Database')
+      // });
 
 
   module.exports = { booksRouter };
