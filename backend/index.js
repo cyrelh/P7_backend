@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const { User } = require("./database/mongo");// avec cet user, on va pouvoir utiliser ce modèle de mongo pour pouvoir enregistrer des data en base de données 
+const { User, Book } = require("./database/mongo");// avec cet User et le Book, on va pouvoir utiliser ce modèle de mongo pour pouvoir enregistrer des data en base de données 
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const { books } = require ('./database/books');
@@ -21,7 +21,7 @@ const PORT = 4000;
 
 app.use(cors()); //Autoriser au front et le backend à communiquer
 app.use(express.json()); // capable de lire les body en JSON
-app.use(express.static('public')); // dossier puclic (images;etc) fichiers statiques
+app.use('/images', express.static('uploads')); //l'utilisateur doit aller sur l'Url uploads et là il aura le dossier uploads
 
 
 // function sayHi(req,res){
@@ -35,21 +35,24 @@ app.get ('/api/books', booksGET); // à chaque fois qu'on fait un booksGET, ça 
 app.post("/api/books", upload.single("image"), booksPOST);// besoin d'un middleware qui va recupérer les données du formData, et c'est la fonction upload qui contient ce middleware
 // quand on met une uatre fonction on appelle ça un middleware, et il faut que ce middleware appelle la fct next(), la req passera tjs d'un middleware à celui d'après jusqu'à la fct finale q'uon appele le controller
 // "image" --> Image: binary--> le nom du champ de la requete 
-// function logReq (req, res, next){ // next = manière d'appeler le middleware d'après
-// console.log("request:", req.body);
-// next();
-// }
 
 function booksGET(req, res){
   res.send(books); // La réponse de la requete HTTP GET quand on fait appelle à la route api/books 
 }
 
-function booksPOST(req, res){
-  const book = req.body.book;
-  console.log("book:", book); // String, récupéré brut du body 
+async function booksPOST(req, res){
+  const file = req.file;
+  const book = req.body.book; // String, récupéré brut du body 
   const bookObj = JSON.parse(book); // transformation via JSON.parse qui va lire la string et la transformer en objet JSON
-  console.log("bookJson:", bookObj);
-  res.send('ok')
+  bookObj.imageUrl = file.path;
+  
+  try{ // dans le cas où le client fait une erreur dans la saisie year :string au lieu de number, ça evite que le serveur crash mais plutot affiche message erreur 500
+    const result = await Book.create(bookObj); // le create nous renvoie à une promesse d'où le await
+    res.send({message:'Livre posté', bookObj:result }); // type de réponse attendue { message: String } + ajout facultatif bookObj:result aidepour frontend ils ont tout l'objet de la fiche book de la base de donnée
+  } catch (e){
+    console.error(e);
+    res.status(500).send("Erreur Serveur" + " " + e.message);
+  }
 }
 
 // console.log('password in .env', process.env); // process .env recupere toutes les variables d'environnement dans fichier .env
