@@ -9,20 +9,21 @@ const booksRouter = express.Router(); //on crée le routeur Express et dans le b
 booksRouter.get('/:id', BookGETById); // Route pour récupérer un livre par son ID  et on nomme le params par :id
 booksRouter.get('/', booksGET); // Route pour récupérer tous les livres
 booksRouter.post('/', auth, upload.single('image'), booksPOST); // Route pour ajouter un livre avec téléchargement d'image
+booksRouter.delete("/:id", auth, booksDELETE);
 
 
 function auth(req, res, next) {
-  const headers = req.headers;
-  const authorization = headers.authorization;
+  const headers = req.headers; // le auth va regarder dans le headers 
+  const authorization = headers.authorization; // puis ausis  regarder dans le hearders authtorization
   if (authorization == null) { // si pas d'autorisaion 
     res.status(401).send("Unauthorized"); 
     return; // STOP on va pas plus loin dans la fonction et donc pas de next si il ne ous envoie pas de headers
   }
-  const token = authorization.split(" ")[1]; //  split au niveau de l'espace " " c'est pour transformer une string en array et on veut le 2e élément celui à index n°1 --> [1]
+  const token = authorization.split(" ")[1]; // si il ya un token du coup, il va le récupérer  split au niveau de l'espace " " c'est pour transformer une string en array et on veut le 2e élément celui à index n°1 --> [1]
   console.log("token:", token);
   try {
     const jwtSecret = String(process.env.JWT_SECRET); // pour transformer le JWT SECRET en string ' '
-    const tokenPayload = jwt.verify(token, jwtSecret);
+    const tokenPayload = jwt.verify(token, jwtSecret); // le auth va le vérifier à partir de notre Secret
     if (tokenPayload == null) {
       res.status(401).send("Unauthorized");
       return;
@@ -107,6 +108,27 @@ return process.env.URL + '/' + process.env.IMAGES_PATH + '/'+ nomFichier;
     }
   }
 
+  async function booksDELETE(req, res) {
+    const id = req.params.id; // on récupère l'id depuis les req.params
+    try {
+      const bookDatabase = await Book.findById(id);
+      if (bookDatabase == null) { // si l'id du book est inexistant dans la db alor livre n'est pas supprimé
+        res.status(404).send("Livre introuvable");
+        return; // on va pas plus loin
+      }
+      const userDatabase = bookDatabase.userId; // Pour éviter de faire supprimer le livre de quelqu'un d'autre
+      const userIdToken = req.tokenPayload.userId; // ça sert à comparer le userId du token avec l'userId dans la  base de données
+      if (userDatabase != userIdToken) { //si c'est pas le meme token, et bien non on autorise pas la suppression du livre
+        res.status(403).send("Vous n'avez pas le droit de supprimer un livre qui ne vous appartient pas");
+        return;
+      }
+      await Book.findByIdAndDelete(id);
+      res.send("Livre supprimé !");
+    } catch (e) {
+      console.error(e);
+      res.status(500).send("Something went wrong:" + e.message);
+    }
+  }
 
 
       //   Book.deleteMany({}).then(() => { // vider la base de données
