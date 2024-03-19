@@ -2,13 +2,38 @@ const { upload } = require('../middleware/multer');// Importation du middleware 
 const { Book } = require('../models/Book');// avec cet User , on va pouvoir utiliser ce modèle de mongo pour pouvoir enregistrer des data en base de données 
 const express = require('express');
 const sharp = require('sharp'); // Importation de la bibliothèque Sharp pour le traitement d'images
+const jwt = require("jsonwebtoken");
 
 
 const booksRouter = express.Router(); //on crée le routeur Express et dans le booksRouter on a seulement 2 requetes à la racine
 booksRouter.get('/:id', BookGETById); // Route pour récupérer un livre par son ID  et on nomme le params par :id
 booksRouter.get('/', booksGET); // Route pour récupérer tous les livres
-booksRouter.post('/', upload.single('image'), booksPOST); // Route pour ajouter un livre avec téléchargement d'image
+booksRouter.post('/', auth, upload.single('image'), booksPOST); // Route pour ajouter un livre avec téléchargement d'image
 
+
+function auth(req, res, next) {
+  const headers = req.headers;
+  const authorization = headers.authorization;
+  if (authorization == null) { // si pas d'autorisaion 
+    res.status(401).send("Unauthorized"); 
+    return; // STOP on va pas plus loin dans la fonction et donc pas de next si il ne ous envoie pas de headers
+  }
+  const token = authorization.split(" ")[1]; //  split au niveau de l'espace " " c'est pour transformer une string en array et on veut le 2e élément celui à index n°1 --> [1]
+  console.log("token:", token);
+  try {
+    const jwtSecret = String(process.env.JWT_SECRET); // pour transformer le JWT SECRET en string ' '
+    const tokenPayload = jwt.verify(token, jwtSecret);
+    if (tokenPayload == null) {
+      res.status(401).send("Unauthorized");
+      return;
+    }
+    req.tokenPayload = tokenPayload;
+    next();
+  } catch (e) {
+    console.error(e);
+    res.status(401).send("Unauthorized");
+  }
+}
 
 async function BookGETById(req, res){   // Fonction pour récupérer un livre par son ID
 
@@ -70,6 +95,8 @@ return process.env.URL + '/' + process.env.IMAGES_PATH + '/'+ nomFichier;
     await sharp(req.file.path) // Utilisation de Sharp pour redimensionner l'image
       .resize(200, 200) // Redimensionnement de l'image à 200x200 pixels
       .toFile(`uploads/${resizedFilename}`); // Enregistrement de l'image redimensionnée sur le serveur
+      //.toFormat('webp', { quality: 80 })
+      //.webp({ quality: 85 })
 
       const result = await Book.create(bookObj); // le create nous renvoie à une promesse d'où le await
       res.send({message:'Livre posté', bookObj:result }); // type de réponse attendue { message: String } + ajout facultatif bookObj:result aidepour frontend ils ont tout l'objet de la fiche book de la base de donnée
@@ -82,7 +109,7 @@ return process.env.URL + '/' + process.env.IMAGES_PATH + '/'+ nomFichier;
 
 
 
-      //   Book.deleteMany({}).then(() => {
+      //   Book.deleteMany({}).then(() => { // vider la base de données
       //   console.log('Supression de tous les Books dans la Database')
       // });
 

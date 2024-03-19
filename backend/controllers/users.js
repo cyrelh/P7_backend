@@ -1,6 +1,7 @@
 const { User } = require('../models/User');// avec cet User , on va pouvoir utiliser ce modèle de mongo pour pouvoir enregistrer des data en base de données 
 const bcrypt = require('bcrypt');
 const express = require('express');
+const jwt = require("jsonwebtoken");
 
 const usersRouter = express.Router(); //dans le usersRouter on a seulement 2 requetes
 usersRouter.post('/signUp', signUp);
@@ -67,13 +68,24 @@ usersRouter.post('/login', login);
       }
 // si cest bon on me renvoie un userid et un token de la base de donnée mongodb et donc on cosidère que le user est connecté
         res.send({
-          userId: userDatabase._id,  // le userid ça sera l'_id du userdatabase
-          token:'token'
+          userId: userDatabase._id,  // le userid ça sera le user id de la base de données --> l'_id du userdatabase
+          token: generateToken(userDatabase._id) //userDatabase._id on le passe du coup à la fct generateToken
         });
       }catch (e) {
     console.error(e);
     res.status(500).send("Erreur serveur");
   }
+}
+
+function generateToken (idDatabase){
+  const payload = {
+    userId: idDatabase
+  };
+  const jwtSecret = String(process.env.JWT_SECRET);
+  const token = jwt.sign(payload, jwtSecret, { // jwt prend 3 arguments payload, mdp secret et option durée expiration token 1day)
+    expiresIn: "1d"
+  });
+  return token;
 }
       function hashPassword(password) {
         const salt = bcrypt.genSaltSync(10); // salt : pourle meme mdp saisi, le hahs va rajouter quand meme de new caractere

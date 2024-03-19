@@ -6,7 +6,7 @@ const storage = multer.diskStorage({ // appel de diskstorage dans un objet avec 
       cb(null,"uploads");
     },
     filename: function (req, file, cb) {
-      const fileName = file.originalname.toLowerCase().split(" ").join("-") + Date.now() + ".jpg";
+      const fileName = file.originalname.toLowerCase().split(" ").join("-") + Date.now() + ".webp";
       cb(null, Date.now() + "-" + fileName);
     }
   });
