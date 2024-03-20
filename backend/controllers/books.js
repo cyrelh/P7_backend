@@ -13,6 +13,45 @@ booksRouter.get('/', booksGET); // Route pour récupérer tous les livres
 booksRouter.post('/', auth, upload.single('image'), bookPOST); // Route pour ajouter un livre avec téléchargement d'image
 booksRouter.delete("/:id", auth, booksDELETE);
 booksRouter.put("/:id", auth, upload.single("image"), bookPUT);
+booksRouter.post("/:id/rating", auth, ratingPOST); // 1st vérifie si on a droit d'appeler cette fct
+
+async function ratingPOST(req, res) {
+  const id = req.params.id; // on regarde deja le id
+  if (id == null || id == "undefined") { // si on passe un id null OU une string undefined mais en String --> problème coté frontend affichage undefined
+    res.status(400).send("l'ID du livre est introuvable");
+    return;
+  }
+
+  const rating = req.body.rating; // vient du payload
+  const userId = req.tokenPayload.userId; // le userId je veux le prendre du token 
+  try {
+    const book = await Book.findById(id); // req sur le book 
+    if (book == null) { // si on ne trouve pas le book
+      res.status(404).send("Livre introuvable"); 
+      return;
+    }
+    const ratingsDatabase = book.ratings;
+    const previousRating = ratingsDatabase.find((rating) => rating.userId == userId); // Trouve moi l'objet (rating) tq le rating.userId soit égal au userId qu'on a dans le tokenPayload 
+    if (previousRating != null) { // sil est différent de null 
+      res.status(400).send("Vous avez déjà noté ce livre"); // ça veut dire qu'on a deja noté ce bouquin
+      return;
+    }
+    const newRating = { userId: userId, grade: rating }; // on veut pusher un userId et un grade; le rating venait du req.body
+    ratingsDatabase.push(newRating);
+    book.averageRating = calculateAverageRating(ratingsDatabase); // on va calculer le averagerating en fonciton de cette nouvelle ratingsDatabase qui aura aussi la nouvelle valeur
+    await book.save(); // pour terminer on va sauvegarder ça dans notre book.save
+    res.send("Note envoyée");
+  } catch (e) { // quand on fait une req dans une db c'est mieux un try catch
+    console.error(e);
+    res.status(500).send("Erreur serveur:" + e.message);
+  }
+}
+
+function calculateAverageRating(ratings) {
+  const sumOfAllGrades = ratings.reduce((total, rating) => total + rating.grade, 0); // on utilis la veleur reduce : QUAND ON VEUT TRANSFORMER UNE Array en une seule valeur, on commence à 0 le current 
+  return sumOfAllGrades / ratings.length; // c'est la somme / par la longieur des ratings
+}
+
 
 async function bestRatingGET(req, res) {
   try { // au lieu de m'envoyer toute la base de données, on demande à mongoose de m'en envoyer que 3
