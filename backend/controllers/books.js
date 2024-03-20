@@ -183,8 +183,10 @@ async function bookPOST(req, res){   // Fonction pour ajouter un livre
     const resizedFilename = `resized_${filename}`;
 
     await sharp(req.file.path) // Utilisation de Sharp pour redimensionner l'image
-      .resize(200, 200) // Redimensionnement de l'image à 200x200 pixels
+      .resize(206, 260) // Redimensionnement de l'image à 206.03x260.42pixels
       .toFile(`uploads/${resizedFilename}`); // Enregistrement de l'image redimensionnée sur le serveur
+      // .webp({ quality: 85 });
+
       //.toFormat('webp', { quality: 80 })
       //.webp({ quality: 85 })
 
