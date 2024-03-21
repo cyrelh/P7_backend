@@ -7,13 +7,13 @@ const jwt = require("jsonwebtoken");
 
 const booksRouter = express.Router(); //on crée le routeur Express et dans le booksRouter on a seulement 2 requetes à la racine
 
-booksRouter.get("/bestrating", bestRatingGET);
-booksRouter.get('/:id', BookGETById); // Route pour récupérer un livre par son ID  et on nomme le params par :id
-booksRouter.get('/', booksGET); // Route pour récupérer tous les livres
-booksRouter.post('/', auth, upload.single('image'), bookPOST); // Route pour ajouter un livre avec téléchargement d'image
-booksRouter.delete("/:id", auth, booksDELETE);
-booksRouter.put("/:id", auth, upload.single("image"), bookPUT);
-booksRouter.post("/:id/rating", auth, ratingPOST); // 1st vérifie si on a droit d'appeler cette fct
+booksRouter.get("/bestrating", bestRatingGET); // Route pour obtenir les livres ayant la meilleure note
+booksRouter.get('/:id', BookGETById); // Route pour récupérer un livre spécifique par son ID  et on nomme le params par :id
+booksRouter.get('/', booksGET); // Route pour obtenir la liste des livres
+booksRouter.post('/', auth, upload.single('image'), bookPOST); // Route pour ajouter(créer) un livre avec upload d'image
+booksRouter.delete("/:id", auth, booksDELETE); // Route pour supprimer un livre
+booksRouter.put("/:id", auth, upload.single("image"), bookPUT); // Route pour mettre à jour un livre
+booksRouter.post("/:id/rating", auth, ratingPOST); // Route pour noter un livre
 
 async function ratingPOST(req, res) {
   const id = req.params.id; // on regarde deja le id
@@ -184,6 +184,7 @@ async function bookPOST(req, res){   // Fonction pour ajouter un livre
 
     await sharp(req.file.path) // Utilisation de Sharp pour redimensionner l'image
       .resize(206, 260) // Redimensionnement de l'image à 206.03x260.42pixels
+      .toFormat('webp', { quality: 80 })
       .toFile(`uploads/${resizedFilename}`); // Enregistrement de l'image redimensionnée sur le serveur
       // .webp({ quality: 85 });
 
